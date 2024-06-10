@@ -8,46 +8,54 @@ from funciones import geo_latlon
 
 app = Flask(__name__)
 
+DB_PATH = '/home/pjcdz/tp3.db'  # Cambia la ruta a la nueva ruta
+
 def create_table():
-    db_path = '/home/pablo/bdatos/datos_sensores.db'  # Cambia la ruta a la nueva ruta
-    if not os.path.exists(db_path):
-        conn = sqlite3.connect(db_path)
+    if not os.path.exists(DB_PATH):
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+            cursor.execute('''CREATE TABLE lectura_sensores (
+                                id INTEGER PRIMARY KEY,
+                                co2 REAL,
+                                temp REAL,
+                                hum REAL,
+                                fecha TEXT,
+                                lugar TEXT,
+                                altura REAL,
+                                presion REAL,
+                                presion_nm REAL,
+                                temp_ext REAL
+                            )''')
+            conn.commit()
+        except sqlite3.Error as e:
+            print(f"Error creating table: {e}")
+        finally:
+            conn.close()
+
+def get_db_records():
+    try:
+        conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
-        cursor.execute('''CREATE TABLE lectura_sensores (
-                            id INTEGER PRIMARY KEY,
-                            co2 REAL,
-                            temp REAL,
-                            hum REAL,
-                            fecha TEXT,
-                            lugar TEXT,
-                            altura REAL,
-                            presion REAL,
-                            presion_nm REAL,
-                            temp_ext REAL
-                        )''')
-        conn.commit()
+        cursor.execute('SELECT * FROM lectura_sensores')
+        records = cursor.fetchall()
+    except sqlite3.Error as e:
+        print(f"Error fetching records: {e}")
+        records = []
+    finally:
         conn.close()
+    return records
 
 @app.route('/')
 def index():
-    db_path = '/home/pablo/bdatos/datos_sensores.db'  # Cambia la ruta a la nueva ruta
     create_table()  # Asegura que la tabla exista antes de realizar la consulta
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM lectura_sensores')
-    records = cursor.fetchall()
-    conn.close()
+    records = get_db_records()
     return render_template('tabla_sensores_para_editar.html', records=records)
 
 @app.route('/datos')
 def datos():
-    db_path = '/home/pablo/bdatos/datos_sensores.db'  # Cambia la ruta a la nueva ruta
     create_table()  # Asegura que la tabla exista antes de realizar la consulta
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM lectura_sensores')
-    records = cursor.fetchall()
-    conn.close()
+    records = get_db_records()
     return jsonify([{
         'co2': record[1],
         'temp': record[2],
@@ -60,9 +68,25 @@ def datos():
         'temp_ext': record[9]
     } for record in records])
 
-if __name__ == '__main__':
-    create_table()
+@app.route('/api/todos-los-datos', methods=['GET'])
+def get_data():
+    create_table()  # Asegura que la tabla exista antes de realizar la consulta
+    records = get_db_records()
+    data = [{
+        'id': record[0],
+        'co2': record[1],
+        'temp': record[2],
+        'hum': record[3],
+        'fecha': record[4],
+        'lugar': record[5],
+        'altura': record[6],
+        'presion': record[7],
+        'presion_nm': record[8],
+        'temp_ext': record[9]
+    } for record in records]
+    return jsonify(data)
 
+def capturar_datos():
     temp_ext, presion, humedad_ext, descripcion_clima = geo_latlon()
     print("Resultados= ", temp_ext, presion, humedad_ext, descripcion_clima)
 
@@ -98,8 +122,7 @@ if __name__ == '__main__':
             print("Fecha", d)
             timestampStr = d.strftime("%d-%b-%Y (%H:%M:%S.%f)")
 
-            db_path = '/home/pablo/bdatos/datos_sensores.db'  # Cambia la ruta a la nueva ruta
-            conn = sqlite3.connect(db_path)
+            conn = sqlite3.connect(DB_PATH)
             cursor = conn.cursor()
             cursor.execute('''INSERT INTO lectura_sensores (co2, temp, hum, fecha, lugar, altura, presion, presion_nm, temp_ext)
                               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
@@ -112,3 +135,9 @@ if __name__ == '__main__':
             print("\nEsperando nuevo registro de datos ...\n")
 
     print("Cierro conexión ...")
+
+if __name__ == '__main__':
+    create_table()
+    # capturar_datos()
+    app.run(debug=True)
+
