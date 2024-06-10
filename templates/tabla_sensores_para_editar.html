@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Sensores de prueba</title>
+  <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
+  <style>
+    body {
+      font-family: Sans-Serif;
+    }
+  </style>
+</head>
+<body>
+  <div>
+    <h1>Sensores de prueba</h1>
+    <hr>
+    <!-- Table Container -->
+    <div id="table"></div>
+  </div>
+  <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>
+  <script>
+    const tableDiv = document.getElementById('table');
+
+    new gridjs.Grid({
+      columns: [
+        { id: 'id', name: 'ID' },
+        { id: 'co2', name: 'CO2' },
+        { id: 'temp', name: 'Temp' },
+        { id: 'hum', name: 'Hum' },
+        { id: 'fecha', name: 'Fecha' },
+        { id: 'lugar', name: 'Lugar' },
+        { id: 'altura', name: 'Altura' },
+        { id: 'presion', name: 'Presión' },
+        { id: 'presion_nm', name: 'Presión NM' },
+        { id: 'temp_ext', name: 'Temp Ext' },
+      ],
+      server: {
+        url: '/api/todos-los-datos',
+        then: data => data.map(row => [
+          row.id, row.co2, row.temp, row.hum, row.fecha, row.lugar, row.altura, row.presion, row.presion_nm, row.temp_ext
+        ]),
+        total: data => data.length,
+      },
+      search: {
+        enabled: true
+      },
+      sort: {
+        enabled: true,
+        multiColumn: true
+      },
+      pagination: {
+        enabled: true,
+        limit: 10
+      }
+    }).render(tableDiv);
+  </script>
+</body>
+</html>
